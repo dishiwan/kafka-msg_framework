@@ -1,0 +1,116 @@
+spring:
+  application:
+    name: kafka-message-processor
+  
+  datasource:
+    driver-class-name: oracle.jdbc.OracleDriver
+    url: ${DB_URL:jdbc:oracle:thin:@localhost:1521:ORCL}
+    username: ${DB_USERNAME:messaging_user}
+    password: ${DB_PASSWORD:messaging_pass}
+    
+    hikari:
+      poolName: OptimizedHikariPool
+      # OPTIMIZED: Increased for high volume
+      minimumIdle: 50                    # Up from 10
+      maximumPoolSize: 100               # Up from 50
+      connectionTimeout: 5000            # Fail fast
+      validationTimeout: 3000
+      idleTimeout: 300000
+      maxLifetime: 900000                # 15 minutes
+      leakDetectionThreshold: 30000      # 30 seconds
+      connectionTestQuery: SELECT 1 FROM DUAL
+      autoCommit: false
+      transactionIsolation: TRANSACTION_READ_COMMITTED
+      registerMbeans: true
+      
+      # Oracle-specific optimizations
+      dataSourceProperties:
+        cachePrepStmts: true
+        prepStmtCacheSize: 500           # Increased from 250
+        prepStmtCacheSqlLimit: 4096      # Increased from 2048
+        useServerPrepStmts: true
+        oracle.jdbc.implicitStatementCacheSize: 250
+        oracle.net.CONNECT_TIMEOUT: 5000
+        oracle.jdbc.ReadTimeout: 30000
+        oracle.jdbc.defaultRowPrefetch: 100
+  
+  jpa:
+    database-platform: org.hibernate.dialect.Oracle12cDialect
+    hibernate:
+      ddl-auto: validate
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+    properties:
+      hibernate:
+        format_sql: false
+        use_sql_comments: false
+        
+        # OPTIMIZED: Batch processing
+        jdbc:
+          batch_size: 100                # Batch 100 statements
+          fetch_size: 100
+          batch_versioned_data: true     # Batch versioned entities
+        
+        order_inserts: true              # Order for batching
+        order_updates: true
+        
+        # OPTIMIZED: Query optimization
+        query:
+          in_clause_parameter_padding: true
+          plan_cache_max_size: 2048
+          plan_parameter_metadata_max_size: 256
+        
+        # OPTIMIZED: Second-level cache
+        cache:
+          use_second_level_cache: true
+          use_query_cache: true
+          region:
+            factory_class: org.hibernate.cache.jcache.JCacheRegionFactory
+        
+        # OPTIMIZED: Statistics for monitoring
+        generate_statistics: true
+        
+        # OPTIMIZED: Connection handling
+        connection:
+          provider_disables_autocommit: true
+          handling_mode: DELAYED_ACQUISITION_AND_RELEASE_AFTER_TRANSACTION
+
+# Async execution configuration
+application:
+  processing:
+    # OPTIMIZED: Larger thread pools
+    thread-pool:
+      core-size: 50                      # Up from 20
+      max-size: 100                      # Up from 50
+      queue-capacity: 2000               # Up from 1000
+    
+    # OPTIMIZED: Dedicated DB thread pool
+    db-thread-pool:
+      core-size: 30
+      max-size: 60
+      queue-capacity: 1000
+    
+    # OPTIMIZED: Batch processing
+    batch:
+      size: 500
+      timeout-ms: 200
+      max-concurrent-batches: 10
+
+# OPTIMIZED: Cache configuration
+cache:
+  type: caffeine
+  caffeine:
+    spec: maximumSize=10000,expireAfterWrite=600s
+  cache-names:
+    - messages
+    - instances
+    - sequences
+
+# OPTIMIZED: Monitoring
+management:
+  metrics:
+    enable:
+      jvm: true
+      hikaricp: true
+      jdbc: true
+      hibernate: true

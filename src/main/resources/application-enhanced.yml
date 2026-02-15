@@ -1,0 +1,20 @@
+
+# Enhanced Autoloader Configuration
+application:
+  # Instance Management
+  instance:
+    heartbeat-interval-seconds: 30       # How often to send heartbeat
+    heartbeat-timeout-minutes: 5         # When to consider instance dead
+  
+  # Lease Management
+  lease:
+    duration-minutes: 15                 # Initial lease duration
+    renewal-interval-minutes: 5          # How often to renew lease
+  
+  # Enhanced Autoloader
+  autoloader:
+    enabled: true
+    process-on-startup: true
+    lock-timeout-minutes: 15
+    max-retry-count: 3                   # NEW: Maximum retry attempts
+    max-processing-time-minutes: 30
